@@ -1,9 +1,29 @@
+import random
+
 from ClassificationModule import *
 from MultiClassification import *
 # from CPUsimplemulti import *
 
 
+# Fix random seed
+def set_random_seed(random_seed=777):
+    np.random.seed(random_seed)
+    random.seed(random_seed)
+
+    pl.seed_everything(random_seed)
+
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    print(f"Set random seed : {random_seed}")
+
+
 if __name__ == "__main__" :
+    set_random_seed(random_seed=777)
+
     model = MultiClassification(learning_rate=0.001, dropout_p=0.5, hidden_size=768, num_classes=3)
 
     dm = ClassificationDataModule(batch_size=32, train_path='./train.tsv', valid_path='./dev.tsv',
