@@ -19,26 +19,27 @@ device = torch.device("cuda")
 # https://www.koreascience.or.kr/article/CFKO202130060662823.pdf
 
 class MultiClassification(pl.LightningModule) :
-    def __init__(self, learning_rate, dropout_p=0.5, hidden_size=768, num_classes=2, top_k=1) :
+    def __init__(self, learning_rate, dropout_p=0.5, hidden_size=768, num_classes=2) :
         super().__init__()
         # hyperparameters
         self.learning_rate = learning_rate
         self.dropout_p = dropout_p
+        self.hidden_size = hidden_size
         self.num_classes = num_classes
-        self.top_k = top_k
+        print(learning_rate, dropout_p, hidden_size, num_classes)
         self.save_hyperparameters()
         
         # set models
         # BERT
         self.bert = BertModel.from_pretrained('skt/kobert-base-v1')
         self.dropout = nn.Dropout(p=self.dropout_p)
-        self.linear = nn.Linear(768, self.num_classes)
+        self.linear = nn.Linear(self.hidden_size, self.num_classes)
 
         # metrics functions
-        self.metric_acc = torchmetrics.Accuracy(num_classes=self.num_classes)
-        self.metric_f1 = torchmetrics.F1(num_classes=self.num_classes)
-        self.metric_rec = torchmetrics.Recall(num_classes=self.num_classes)
-        self.metric_pre = torchmetrics.Precision(num_classes=self.num_classes)
+        self.metric_acc = torchmetrics.Accuracy(num_classes=self.num_classes, average='macro')
+        self.metric_f1 = torchmetrics.F1(num_classes=self.num_classes, average='macro')
+        self.metric_rec = torchmetrics.Recall(num_classes=self.num_classes, average='macro')
+        self.metric_pre = torchmetrics.Precision(num_classes=self.num_classes, average='macro')
 
         self.loss_func = nn.CrossEntropyLoss()
 
@@ -95,13 +96,14 @@ class MultiClassification(pl.LightningModule) :
         for i in outputs :
             y_true += i['label'].tolist()
             y_pred += i['pred'].tolist()
-        y_true = torch.tensor(y_true)
-        y_pred = torch.tensor(y_pred)
-        acc = self.metric_acc(y_pred, y_true)
-        prec = self.metric_pre(y_pred, y_true)
-        rec = self.metric_rec(y_pred, y_true)
-        f1 = self.metric_f1(y_pred, y_true)
-
+        y_true = torch.tensor(y_true).to(device)
+        y_pred = torch.tensor(y_pred).to(device)
+        print(y_true, y_pred)
+        print(y_true.shape, y_pred.shape)
+        acc = self.metric_acc(y_true, y_pred)
+        prec = self.metric_pre(y_true, y_pred)
+        rec = self.metric_rec(y_true, y_pred)
+        f1 = self.metric_f1(y_true, y_pred)
         print(f'[Epoch {self.trainer.current_epoch} {state.upper()}] Acc: {acc}, Prec: {prec}, Rec: {rec}, F1: {f1}')
 
     def validation_step(self, batch, batch_idx) :
@@ -145,7 +147,7 @@ class MultiClassification(pl.LightningModule) :
         
     
     def configure_optimizers(self) :
-        optimizer = torch.optim.AdamW(self.bert.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.learning_rate, weight_decay=1e-5)
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
         
         return {
