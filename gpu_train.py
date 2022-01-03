@@ -48,7 +48,9 @@ if __name__ == "__main__" :
         logger = tb_logger,
         callbacks = [checkpoint_callback, lr_logger],
         max_epochs=2,
-        gpus=1
+        devices=[0],  # Set device numbers
+        accelerator="auto"
+        # gpus=1
     )
     
     trainer.fit(model, dm)

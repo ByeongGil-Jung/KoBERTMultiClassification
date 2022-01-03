@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import transformers
 from transformers import BertModel, AdamW
 
-device = torch.device("cuda")
+# device = torch.device("cuda")
 
 # https://medium.com/huggingface/multi-label-text-classification-using-bert-the-mighty-transformer-69714fa3fb3d
 # https://huggingface.co/docs/transformers/v4.15.0/en/model_doc/electra#transformers.ElectraForSequenceClassification
@@ -65,9 +65,9 @@ class MultiClassification(pl.LightningModule) :
         # change label shape (list -> torch.Tensor((batch_size, 1)))
         label = batch['label'].view([-1,1])
 
-        output = self(input_ids=batch['input_ids'].to(device),
-                        attention_mask=batch['attention_mask'].to(device),
-                        token_type_ids=batch['token_type_ids'].to(device)
+        output = self(input_ids=batch['input_ids'].to(self.device),
+                        attention_mask=batch['attention_mask'].to(self.device),
+                        token_type_ids=batch['token_type_ids'].to(self.device)
                     )
         '''
         ##########################################################
@@ -77,7 +77,7 @@ class MultiClassification(pl.LightningModule) :
         ##########################################################
         '''
         # loss = output.loss
-        loss = self.loss_func(output.to(device), batch['label'].to(device))
+        loss = self.loss_func(output.to(self.device), batch['label'].to(self.device))
 
         softmax = nn.functional.softmax(output, dim=1)
         preds = softmax.argmax(dim=1)
@@ -96,8 +96,8 @@ class MultiClassification(pl.LightningModule) :
         for i in outputs :
             y_true += i['label'].tolist()
             y_pred += i['pred'].tolist()
-        y_true = torch.tensor(y_true).to(device)
-        y_pred = torch.tensor(y_pred).to(device)
+        y_true = torch.tensor(y_true).to(self.device)
+        y_pred = torch.tensor(y_pred).to(self.device)
         print(y_true, y_pred)
         print(y_true.shape, y_pred.shape)
         acc = self.metric_acc(y_true, y_pred)
@@ -114,9 +114,9 @@ class MultiClassification(pl.LightningModule) :
         * attention_mask.shape (batch_size, max_length)
         ##########################################################
         '''
-        output = self(input_ids=batch['input_ids'].to(device),
-                        attention_mask=batch['attention_mask'].to(device),
-                        token_type_ids=batch['token_type_ids'].to(device))
+        output = self(input_ids=batch['input_ids'].to(self.device),
+                        attention_mask=batch['attention_mask'].to(self.device),
+                        token_type_ids=batch['token_type_ids'].to(self.device))
         preds = nn.functional.softmax(output, dim=1).argmax(dim=1)
 
         labels = batch['label']
